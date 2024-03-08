@@ -1,9 +1,21 @@
-from flask import Flask, render_template, request, redirect, session, url_for
+from flask import Flask, render_template, request, redirect, session, url_for, Response
 from functools import wraps
 import secrets
 import random
+import json
+import mariadb
 
 app = Flask(__name__)
+
+config = {
+    'host': 'db.tecnico.ulisboa.pt',
+    'user': 'ist1110887',
+    'password': 'rwhq1077',
+    'database': 'ist1110887'
+}
+
+conn = mariadb.connect(**config)
+cur = conn.cursor()
 
 # Placeholder user credentials (replace with secure storage)
 users = {'user1': 'user1', 'user2': 'user2'}
@@ -52,7 +64,25 @@ def get_pin():
 
     # TODO: Store the pin in the DB with the timestamp
     return render_template('getpin.html', pin=pin)   
-    
+  
+
+@app.route('/add-measure', methods=['POST'])
+def addMeasure():
+  time = request.form['timestamp']
+  value = request.form['value']
+  sensorid = request.form['sensorid']
+  print(time, value, sensorid)
+  if not sensorid or not value or not time:
+     return Response(status=400)
+  
+
+  sql= "INSERT INTO MEASUREMENTS (SENSORID, MEASURE_TIMESTAMP, VALUE) VALUES (?,?,?)"
+  data= (sensorid, time, value)
+  cur.execute(sql, data)
+
+  conn.commit()
+
+  return Response(status=200)
 
 @app.route('/', methods=['GET', 'POST'])
 @login_required
