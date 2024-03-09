@@ -1,14 +1,26 @@
-from flask import Flask, render_template, request, redirect, session, url_for
+from flask import Flask, render_template, request, redirect, session, url_for, Response
 from functools import wraps
 import secrets
 import random
-
+import json
+import mariadb
 import plotly.graph_objs as go
+import os
 
 import time
 from datetime import datetime
 
 app = Flask(__name__)
+
+config = {
+    'host': os.environ['DB_HOST'],
+    'user': os.environ['DB_USERNAME'],
+    'password': os.environ['DB_PASSWORD'],
+    'database': os.environ['DB_NAME']
+}
+
+conn = mariadb.connect(**config)
+cur = conn.cursor()
 
 # Placeholder user credentials (replace with secure storage)
 users = {'user1': 'user1', 'user2': 'user2'}
@@ -59,7 +71,7 @@ def get_pin():
     return render_template('getpin.html', pin=pin)
 
 @app.route('/analytics', methods=['POST'])
-#@login_required
+@login_required
 def analytics():
     # replace with database retrieval
     humidity_values = [30, 35, 40, 60, 70, 40, 20]
@@ -103,10 +115,26 @@ def add_footage():
 
     return 'Footage added'
 
+@app.route('/add-measure', methods=['POST'])
+def addMeasure():
+  time = request.form['timestamp']
+  value = request.form['value']
+  sensorid = request.form['sensorid']
+  print(time, value, sensorid)
+  if not sensorid or not value or not time:
+     return Response(status=400)
+  
+  sql= "INSERT INTO MEASUREMENTS (SENSORID, MEASURE_TIMESTAMP, VALUE) VALUES (?,?,?)"
+  data= (sensorid, time, value)
+  cur.execute(sql, data)
+
+  conn.commit()
+
+  return Response(status=200)
+
 @app.route('/', methods=['GET', 'POST'])
 @login_required
 def main():
-
   #TODO fetch values from DB  
   # Qualify light
   light_value = 250
