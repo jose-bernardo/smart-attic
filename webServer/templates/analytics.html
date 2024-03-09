@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sensor Data Analytics</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+  <h1>Sensor Data Analytics</h1>
+
+  <h2>Temperature</h2>
+
+  <div id="temp-graph"></div>
+
+  <script type="text/javascript">
+      var graph = {{ data["temperature"] | safe }};
+      Plotly.plot("temp-graph", graph, {});
+  </script>
+
+  <h2>Humidity</h2>
+
+  <div id="humi-graph"></div>
+
+  <script type="text/javascript">
+      var graph = {{ data["humidity"] | safe }};
+      Plotly.plot("humi-graph", graph, {});
+  </script>
+
+  <h2>Light</h2>
+
+  Status: {{ data["light"] }}
+
+  <form action="/analytics" method="post">
+      <button type="submit" value="Submit">Refresh</button>
+  </form>
+</body>

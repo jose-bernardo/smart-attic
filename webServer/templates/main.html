@@ -7,9 +7,16 @@
   <h1>Welcome!</h1>
   <p>You are logged in.</p>
 
-  <form style="display: inline-block;">  
-    <form action="/historic" method="post" style="display: inline-block;">
-      <button type="submit">Historic</button>
+  <h2>Current Status:</h2>
+  <div id="data-container">
+      <p>Temperature: {{ data['temperature'] }}&deg;C</p>
+    <p>Humidity: {{ data['humidity'] }}&percnt;</p>
+    <p>Luminosity: {{ data['luminosity'] }}</p>
+    <p>Water Leaks: {{ data['waterLeaks'] }}</p>
+  </div>
+
+    <form action="/analytics" method="post" style="display: inline-block;">
+      <button type="submit">Analytics</button>
     </form>
     <form action="/changeAlarmValues" method="post" style="display: inline-block;">
       <button type="submit">Change Alarm Values</button>
@@ -20,13 +27,5 @@
     <form action="/logout" method="post" style="display: inline-block;">
       <button type="submit">Logout</button>
     </form>
-  </form>
-
-  <div id="data-container">
-    <p>**Temperature:** {{ data['temperature'] }}</p>
-    <p>**Humidity:** {{ data['humidity'] }}</p>
-    <p>**Luminosity:** {{ data['luminosity'] }}</p>
-    <p>**Water Leaks:** {{ data['waterLeaks'] }}</p>
-  </div>
 </body>
 </html>
