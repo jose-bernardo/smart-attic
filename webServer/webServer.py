@@ -3,10 +3,11 @@ from functools import wraps
 import secrets
 import random
 import json
-import mariadb
+#import mariadb
 import plotly.graph_objs as go
 import os
-
+import cv2
+import numpy as np
 import time
 from datetime import datetime
 
@@ -19,8 +20,8 @@ config = {
     'database': 'ist1110887'
 }
 
-conn = mariadb.connect(**config)
-cur = conn.cursor()
+#conn = mariadb.connect(**config)
+#cur = conn.cursor()
 
 # Placeholder user credentials (replace with secure storage)
 users = {'user1': 'user1', 'user2': 'user2'}
@@ -104,31 +105,33 @@ def analytics():
 
     return render_template('analytics.html', data={'humidity': humidity_graph_json, 'temperature': temperature_graph_json})
 
-@app.route('/add_footage', methods=['POST'])
-def add_footage():
-    media = request.data
-
-    filename = 'media-' + str(time.time()) + '.mp3'
-
-    with open(filename, 'wb') as f:
-        f.write(media)
-
-    return 'Footage added'
 
 @app.route('/add-measure', methods=['POST'])
 def addMeasure():
   time = request.form['timestamp']
+  if not time:
+     time = datetime.now
+
   value = request.form['value']
   sensorid = request.form['sensorid']
   print(time, value, sensorid)
-  if not sensorid or not value or not time:
+  if not sensorid or not value:
      return Response(status=400)
   
-  sql= "INSERT INTO MEASUREMENTS (SENSORID, MEASURE_TIMESTAMP, VALUE) VALUES (?,?,?)"
-  data= (sensorid, time, value)
-  cur.execute(sql, data)
+  sql = "INSERT INTO MEASUREMENTS (SENSORID, MEASURE_TIMESTAMP, VALUE) VALUES (?,?,?)"
+  data = (sensorid, time, value)
+  #cur.execute(sql, data)
 
-  conn.commit()
+  #conn.commit()
+
+  return Response(status=200)
+
+@app.route('/add-footage', methods=['POST'])
+def addFootage():
+  print("TESTE")
+  # Receive the video file from the server
+  videofile = request.files['video']
+  videofile.save('received_video.avi')
 
   return Response(status=200)
 
@@ -156,4 +159,4 @@ def main():
   return render_template('main.html', data=data)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0", port=5001)

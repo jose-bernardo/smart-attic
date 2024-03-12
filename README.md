@@ -16,3 +16,7 @@ export DB_NAME = "your-database-name"
 cd webServer
 python3 webServer.py
 ```
+
+pip install flask
+brew install mariadb-connector-c
+pip install mariadb
