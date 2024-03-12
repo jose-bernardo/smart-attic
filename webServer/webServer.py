@@ -13,10 +13,10 @@ from datetime import datetime
 app = Flask(__name__)
 
 config = {
-    'host': os.environ['DB_HOST'],
-    'user': os.environ['DB_USERNAME'],
-    'password': os.environ['DB_PASSWORD'],
-    'database': os.environ['DB_NAME']
+    'host': 'db.tecnico.ulisboa.pt',
+    'user': 'ist1110887',
+    'password': 'rwhq1077',
+    'database': 'ist1110887'
 }
 
 conn = mariadb.connect(**config)
