@@ -18,14 +18,11 @@ config = {
     'database': os.getenv('DB_NAME')
 }
 
-try:
-    conn = mariadb.connect(**config)
-    print(f"Successfully connected to MariaDB")
-except mariadb.Error as e:
-    print(f"Error connecting to MariaDB platform: {e}")
-    sys.exit(1)
-
-cur = conn.cursor()
+pool = mariadb.ConnectionPool(
+    pool_name='banana',
+    pool_size=5,
+    **config
+)
 
 # Placeholder user credentials (replace with secure storage)
 users = {'user1': 'user1', 'user2': 'user2'}
@@ -86,6 +83,8 @@ def analytics():
         start_date = start_date.strftime('%Y-%m-%d %H:%M:%S')
         end_date = end_date.strftime('%Y-%m-%d %H:%M:%S')
 
+    conn = pool.get_connection()
+    cur = conn.cursor()
     cur.execute('SELECT VALUE, MEASURE_TIMESTAMP FROM MEASUREMENTS ' + 
                 'WHERE SENSORID=\'temperature\' AND MEASURE_TIMESTAMP BETWEEN %s AND %s', (start_date, end_date))
     conn.commit()
@@ -111,6 +110,9 @@ def analytics():
         humidity_values.append(value)
         timestamps.append(timestamp)
 
+    cur.close()
+    conn.close()
+
     # Create humidity graph
     trace = go.Scatter(x=timestamps, y=humidity_values, mode='lines+markers', name='Humidity')
     layout = go.Layout(title='Humidity Over Time',
@@ -130,8 +132,12 @@ def addMeasure():
         return Response(status=400)
 
     try:
+        conn = pool.get_connection()
+        cur = conn.cursor()
         cur.execute("INSERT INTO MEASUREMENTS (VALUE, SENSORID) VALUES (?, ?)", (float(value), sensorid))
         conn.commit()
+        cur.close()
+        conn.close()
     except mariadb.Error as e:
         print(e)
 
@@ -146,20 +152,26 @@ def addFootage():
 
   return Response(status=200)
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/', methods=['GET'])
 #@login_required
 def main():
+    conn = pool.get_connection()
+    cur = conn.cursor()
     cur.execute('SELECT VALUE, MEASURE_TIMESTAMP FROM MEASUREMENTS ' + 
                 'WHERE SENSORID=\'temperature\' ORDER BY MEASURE_TIMESTAMP DESC LIMIT 1')
     conn.commit()
 
     temperature, timestamp = cur.fetchone()
+    cur.close()
 
+    cur = conn.cursor()
     cur.execute('SELECT VALUE, MEASURE_TIMESTAMP FROM MEASUREMENTS ' + 
                 'WHERE SENSORID=\'humidity\' ORDER BY MEASURE_TIMESTAMP DESC LIMIT 1')
     conn.commit()
 
     humidity, timestamp = cur.fetchone()
+    cur.close()
+    conn.close()
 
     data = {
             "temperature": temperature,
