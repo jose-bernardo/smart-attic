@@ -11,6 +11,7 @@ print(f"Server URL: {server_url}")
 
 # Initialize the serial connection
 ser = serial.Serial(serial_port, baud_rate)
+ser.flush()
 
 try:
     while True:
