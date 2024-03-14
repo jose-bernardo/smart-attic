@@ -81,14 +81,14 @@ def analytics():
         start_date = request.form['start_date']
         end_date = request.form['end_date']
     else:
-        start_date = datetime.datetime.now() - datetime.timedelta(hours=24)
+        start_date = datetime.datetime.now() + datetime.timedelta(hours=24)
         end_date = datetime.datetime.now()
-        start_date = start_date.strftime('%Y-%m-%d %H:%M:%S')
-        end_date = end_date.strftime('%Y-%m-%d %H:%M:%S')
+
+    start_date = start_date.strftime('%Y-%m-%d %H:%M:%S')
+    end_date = end_date.strftime('%Y-%m-%d %H:%M:%S')
 
     cur.execute('SELECT VALUE, MEASURE_TIMESTAMP FROM MEASUREMENTS ' + 
                 'WHERE SENSORID=\'temperature\' AND MEASURE_TIMESTAMP BETWEEN %s AND %s', (start_date, end_date))
-    conn.commit()
     temperature_values = []
     timestamps = [] 
     for value, timestamp in cur:
@@ -103,13 +103,13 @@ def analytics():
     fig = go.Figure(data=[trace], layout=layout)
     temperature_graph_json = fig.to_json()
 
-    cur.execute('SELECT VALUE, MEASURE_TIMESTAMP FROM MEASUREMENTS ' + 
+    fig.show()
+
+    cur.execute('SELECT VALUE FROM MEASUREMENTS ' + 
                 'WHERE SENSORID=\'humidity\' AND MEASURE_TIMESTAMP BETWEEN %s AND %s', (start_date, end_date))
     humidity_values = []
-    timestamps = []
-    for value, timestamp in cur:
+    for value in cur:
         humidity_values.append(value)
-        timestamps.append(timestamp)
 
     # Create humidity graph
     trace = go.Scatter(x=timestamps, y=humidity_values, mode='lines+markers', name='Humidity')
@@ -124,18 +124,23 @@ def analytics():
 
 @app.route('/add-measure', methods=['POST'])
 def addMeasure():
-    value = request.form['value']
-    sensorid = request.form['sensorid']
-    if not sensorid or not value:
-        return Response(status=400)
+  time = request.form['timestamp']
+  if not time:
+     time = datetime.now
 
-    try:
-        cur.execute("INSERT INTO MEASUREMENTS (VALUE, SENSORID) VALUES (?, ?)", (float(value), sensorid))
-        conn.commit()
-    except mariadb.Error as e:
-        print(e)
+  value = request.form['value']
+  sensorid = request.form['sensorid']
+  print(time, value, sensorid)
+  if not sensorid or not value:
+     return Response(status=400)
+  
+  sql = "INSERT INTO MEASUREMENTS (SENSORID, MEASURE_TIMESTAMP, VALUE) VALUES (?,?,?)"
+  data = (sensorid, time, value)
+  #cur.execute(sql, data)
 
-    return Response(status=200)
+  #conn.commit()
+
+  return Response(status=200)
 
 @app.route('/add-footage', methods=['POST'])
 def addFootage():
@@ -147,29 +152,27 @@ def addFootage():
   return Response(status=200)
 
 @app.route('/', methods=['GET', 'POST'])
-#@login_required
+@login_required
 def main():
-    cur.execute('SELECT VALUE, MEASURE_TIMESTAMP FROM MEASUREMENTS ' + 
-                'WHERE SENSORID=\'temperature\' ORDER BY MEASURE_TIMESTAMP DESC LIMIT 1')
-    conn.commit()
+  #TODO fetch values from DB  
+  # Qualify light
+  light_value = 250
+  if light_value < 50:
+      light = 'dark'
+  elif light_value < 500:
+      light = 'dim'
+  else:
+      light = 'bright'
 
-    temperature, timestamp = cur.fetchone()
+  data = {
+    "temperature": 13,
+    "humidity": 20,
+    "luminosity": light,
+    "waterLeaks": "No leaks detected",
+  }
 
-    cur.execute('SELECT VALUE, MEASURE_TIMESTAMP FROM MEASUREMENTS ' + 
-                'WHERE SENSORID=\'humidity\' ORDER BY MEASURE_TIMESTAMP DESC LIMIT 1')
-    conn.commit()
-
-    humidity, timestamp = cur.fetchone()
-
-    data = {
-            "temperature": temperature,
-            "humidity": humidity,
-            "luminosity": "GOOD",
-            "waterLeaks": "No leaks detected",
-            "timestamp": timestamp,
-            }
-
-    return render_template('main.html', data=data)
+  # Content of the main page (replace with actual content)
+  return render_template('main.html', data=data)
 
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0", port=5001)

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+<meta http-equiv="refresh" content="5">
 <head>
   <title>Main Page</title>
 </head>
@@ -9,10 +10,11 @@
 
   <h2>Current Status:</h2>
   <div id="data-container">
-      <p>Temperature: {{ data['temperature'] }}&deg;C</p>
-    <p>Humidity: {{ data['humidity'] }}&percnt;</p>
+    <p>Temperature: {{ data['temperature'] }} &deg;C</p>
+    <p>Humidity: {{ data['humidity'] }} &percnt;</p>
     <p>Luminosity: {{ data['luminosity'] }}</p>
     <p>Water Leaks: {{ data['waterLeaks'] }}</p>
+    <p>Last update was at <b>{{ data['timestamp'] }}</b></p>
   </div>
 
     <form action="/analytics" method="post" style="display: inline-block;">

@@ -25,11 +25,11 @@
       Plotly.plot("humi-graph", graph, {});
   </script>
 
-  <h2>Light</h2>
-
-  Status: {{ data["light"] }}
-
   <form action="/analytics" method="post">
-      <button type="submit" value="Submit">Refresh</button>
+      <label for="start_date">Start Date:</label>
+      <input type="date" id="start_date" name="start_date">
+      <label for="end_date">End Date:</label>
+      <input type="date" id="end_date" name="end_date">
+      <button type="submit" value="Submit">Filter</button>
   </form>
 </body>
