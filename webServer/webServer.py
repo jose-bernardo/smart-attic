@@ -145,10 +145,9 @@ def addMeasure():
 
 @app.route('/add-footage', methods=['POST'])
 def addFootage():
-  print("TESTE")
   # Receive the video file from the server
   videofile = request.files['video']
-  videofile.save('received_video.avi')
+  videofile.save('./media/video_' + str(time.time()) + '.avi')
 
   return Response(status=200)
 
