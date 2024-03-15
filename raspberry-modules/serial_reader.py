@@ -21,7 +21,7 @@ try:
 
         if info[0] == "warning":
             print(line)
-            #request.post('http://' + server_url + '/notify')
+            requests.post('http://' + server_url + '/notify', data={'sensorid': info[1], 'value': info[2]})
         elif info[0] == "measurement":
             print(info)
             requests.post('http://' + server_url + '/add-measure', data={'sensorid': info[1], 'value': info[2]})

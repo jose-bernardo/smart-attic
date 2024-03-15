@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, session, url_for, Response
+from flask_mail import Mail, Message
 from functools import wraps
 import secrets
 import json
@@ -10,6 +11,18 @@ import time, datetime
 import os, sys, random
 
 app = Flask(__name__)
+
+app.config.update(
+    DEBUG=True,
+    MAIL_SERVER='smtp.gmail.com',
+    MAIL_PORT=587,
+    MAIL_USE_TLS=True,
+    MAIL_USE_SSL=False,
+    MAIL_USERNAME='cocodoce02@gmail.com',  # Your Gmail address
+    MAIL_PASSWORD='aocb lgki dmgj yzkj',  # Your Gmail app password
+    MAIL_DEFAULT_SENDER='cocodoce02@gmail.com'  # Default sender email
+)
+mail = Mail(app)
 
 config = {
     'host': os.getenv('DB_HOST'),
@@ -26,6 +39,7 @@ pool = mariadb.ConnectionPool(
 
 # Placeholder user credentials (replace with secure storage)
 users = {'user1': 'user1', 'user2': 'user2'}
+pins = {'user1': None, 'user2': None}
 app.secret_key = secrets.token_hex(16)  # Generates a 32-character hexadecimal string (16 bytes)
 
 def login_required(f):
@@ -51,6 +65,7 @@ def login():
         if username in users and users[username] == password:
             # Successful login (replace with redirection to protected area)
             session['logged_in'] = True
+            session['username'] = username
             return redirect('/')
         else:
             error = 'Invalid Credentials. Please try again.'
@@ -61,16 +76,19 @@ def login():
 @login_required
 def logout():    
     del session['logged_in']
+    del session['username']
     return redirect('/login')
 
 @app.route('/getPin', methods=['POST'])
 @login_required
 def get_pin():
     # Generate a random integer between 1000 and 9999 (inclusive)
-    pin = random.randint(1000, 9999)
+    pin = random.randint(1000, 9999)\
+    
+    pins[session['username']] = (pin, time.time() + 10)
 
-    # TODO: Store the pin in the DB with the timestamp
     return render_template('getpin.html', pin=pin)
+
 
 @app.route('/analytics', methods=['POST'])
 def analytics():
@@ -145,11 +163,64 @@ def addMeasure():
 
 @app.route('/add-footage', methods=['POST'])
 def addFootage():
-  # Receive the video file from the server
-  videofile = request.files['video']
-  videofile.save('./media/video_' + str(time.time()) + '.avi')
+    # Receive the video file from the server
 
-  return Response(status=200)
+    videofile = request.files['video']
+    filename = './media/video_' + str(time.time()) + '.avi'
+    videofile.save(filename)
+    
+    # for testing purposes 
+    #filename = './media/received_video1710517031.731575.avi'
+
+    recipient_email = "difb70@gmail.com"
+    subject = "Video footage of intruder"
+    body = "Please see the attached video footage."
+
+
+    msg = Message(subject, recipients=[recipient_email])
+    msg.body = body
+    
+    # Attach the video file to the email
+    with app.open_resource(filename) as video:
+        msg.attach('video.avi', 'video/avi', video.read())
+
+    try:
+        mail.send(msg)
+        return 'Email sent successfully!'
+    except Exception as e:
+        return str(e), 500
+
+@app.route('/notify', methods=['POST'])
+def notify():
+    recipient_email = "difb70@gmail.com"
+    subject = "Alarm " + request.form['sensorid']
+    body = "Alarm for " + request.form['sensorid'] + " sensor. Value: " + request.form['value']
+
+    msg = Message(subject, recipients=[recipient_email])
+    msg.body = body
+    try:
+        mail.send(msg)
+        return 'Email sent successfully!'
+    except Exception as e:
+        return str(e), 500
+    
+@app.route('/enterPin', methods=['POST'])
+def enterPin():
+    userid = request.form['userid']
+    pin = int(request.form['pin'])
+
+    if (pins[userid] != None):
+        if (pins[userid][1] < time.time()):
+            return 'Pin is not valid. please request a new one.'
+        elif (pins[userid][0] != pin):
+            return 'Pin invalid.'
+        else: 
+            pins[userid] = None
+            return 'Access granted.'
+    else:
+        return 'No pin set, request a new pin.'
+
+
 
 @app.route('/', methods=['GET'])
 #@login_required
