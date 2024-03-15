@@ -38,7 +38,7 @@ def main():
     out.release()
 
     # Send the video file via HTTP POST request
-    url = 'http://' + os.getenv('SERVER_URL') + '/add-footage')
+    url = 'http://' + (os.getenv('SERVER_URL') or "127.0.0.1:5001") + '/add-footage'
     files = {'video': open('output.avi', 'rb')}
     response = requests.post(url, files=files)
 
