@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, session, url_for, Response
 from flask_mail import Mail, Message
 from functools import wraps
+import requests
 import secrets
 import json
 import mariadb
@@ -72,14 +73,71 @@ def login():
 
     return render_template('login.html', error=error)
 
-@app.route('/logout', methods=['POST'])
+@app.route('/logout', methods=['GET'])
 @login_required
 def logout():    
     del session['logged_in']
     del session['username']
     return redirect('/login')
 
-@app.route('/getPin', methods=['POST'])
+@app.route('/changeAlarmValues', methods=['GET', 'POST'])
+@login_required
+def changeAlarmValues():
+    
+    if request.method == 'POST':
+        raspberrypi_address = "127.0.0.1"
+
+        min_humidity = request.form.get('minHumidity')
+        max_humidity = request.form.get('maxHumidity')
+        min_temperature = request.form.get('minTemperature')
+        max_temperature = request.form.get('maxTemperature')
+
+        humidity_error_min = None
+        humidity_error_max = None
+        temperature_error_min = None
+        temperature_error_max = None
+
+        if min_humidity != '':
+            if not min_humidity.isdigit() or not 20 <= int(min_humidity) <= 95:
+                humidity_error_min = 'Min humidity must be a number between 20 and 95'
+        if max_humidity != '':
+            if not max_humidity.isdigit() or not 20 <= int(max_humidity) <= 95:
+                humidity_error_max = 'Max humidity must be a number between 20 and 95'
+
+        if min_temperature != '':
+            if not min_temperature.isdigit() or not 0 <= int(min_temperature) <= 50:
+                temperature_error_min = 'Min temperature must be a number between 0 and 50'
+        if max_temperature != '':
+            if not max_temperature.isdigit() or not 0 <= int(max_temperature) <= 50:
+                temperature_error_max = 'Max temperature must be a number between 0 and 50'
+        
+        if humidity_error_min or humidity_error_max or temperature_error_min or temperature_error_max:
+            return render_template('changeAlarmValues.html', humidity_error_min=humidity_error_min, humidity_error_max=humidity_error_max, temperature_error_min=temperature_error_min, temperature_error_max=temperature_error_max)
+
+        # Data to send to the other Flask app
+        data = {
+            'minHumidity': min_humidity,
+            'maxHumidity': max_humidity,
+            'minTemperature': min_temperature,
+            'maxTemperature': max_temperature
+        }
+
+        url = 'http://' + raspberrypi_address + ':5002/receiveAlarmValues'
+        
+        # Make a POST request to the other Flask app
+        response = requests.post(url, json=data)
+
+        # Check if the request was successful
+        if response.ok:
+            return 'Values were changed successfully'
+        else:
+            return 'Something went wrong', 500
+
+    return render_template('changeAlarmValues.html')
+
+
+
+@app.route('/getPin', methods=['GET'])
 @login_required
 def get_pin():
     # Generate a random integer between 1000 and 9999 (inclusive)
@@ -90,7 +148,8 @@ def get_pin():
     return render_template('getpin.html', pin=pin)
 
 
-@app.route('/analytics', methods=['POST'])
+@app.route('/analytics', methods=['GET'])
+@login_required
 def analytics():
     if ('start_date' in request.form and 'end_date' in request.form):
         start_date = request.form['start_date']
@@ -141,6 +200,36 @@ def analytics():
 
     return render_template('analytics.html', data={'humidity': humidity_graph_json, 'temperature': temperature_graph_json})
 
+@app.route('/', methods=['GET'])
+@login_required
+def main():
+    conn = pool.get_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT VALUE, MEASURE_TIMESTAMP FROM MEASUREMENTS ' + 
+                'WHERE SENSORID=\'temperature\' ORDER BY MEASURE_TIMESTAMP DESC LIMIT 1')
+    conn.commit()
+
+    temperature, timestamp = cur.fetchone()
+    cur.close()
+
+    cur = conn.cursor()
+    cur.execute('SELECT VALUE, MEASURE_TIMESTAMP FROM MEASUREMENTS ' + 
+                'WHERE SENSORID=\'humidity\' ORDER BY MEASURE_TIMESTAMP DESC LIMIT 1')
+    conn.commit()
+
+    humidity, timestamp = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    data = {
+            "temperature": temperature,
+            "humidity": humidity,
+            "luminosity": "GOOD",
+            "waterLeaks": "No leaks detected",
+            "timestamp": timestamp,
+            }
+
+    return render_template('main.html', data=data)
 
 @app.route('/add-measure', methods=['POST'])
 def addMeasure():
@@ -219,39 +308,6 @@ def enterPin():
             return 'Access granted.'
     else:
         return 'No pin set, request a new pin.'
-
-
-
-@app.route('/', methods=['GET'])
-#@login_required
-def main():
-    conn = pool.get_connection()
-    cur = conn.cursor()
-    cur.execute('SELECT VALUE, MEASURE_TIMESTAMP FROM MEASUREMENTS ' + 
-                'WHERE SENSORID=\'temperature\' ORDER BY MEASURE_TIMESTAMP DESC LIMIT 1')
-    conn.commit()
-
-    temperature, timestamp = cur.fetchone()
-    cur.close()
-
-    cur = conn.cursor()
-    cur.execute('SELECT VALUE, MEASURE_TIMESTAMP FROM MEASUREMENTS ' + 
-                'WHERE SENSORID=\'humidity\' ORDER BY MEASURE_TIMESTAMP DESC LIMIT 1')
-    conn.commit()
-
-    humidity, timestamp = cur.fetchone()
-    cur.close()
-    conn.close()
-
-    data = {
-            "temperature": temperature,
-            "humidity": humidity,
-            "luminosity": "GOOD",
-            "waterLeaks": "No leaks detected",
-            "timestamp": timestamp,
-            }
-
-    return render_template('main.html', data=data)
 
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0", port=5001)

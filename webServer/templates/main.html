@@ -17,16 +17,16 @@
     <p>Last update was at <b>{{ data['timestamp'] }}</b></p>
   </div>
 
-    <form action="/analytics" method="post" style="display: inline-block;">
+    <form action="/analytics" method="get" style="display: inline-block;">
       <button type="submit">Analytics</button>
     </form>
-    <form action="/changeAlarmValues" method="post" style="display: inline-block;">
+    <form action="/changeAlarmValues" method="get" style="display: inline-block;">
       <button type="submit">Change Alarm Values</button>
     </form>
-    <form action="/getPin" method="post" style="display: inline-block;">
+    <form action="/getPin" method="get" style="display: inline-block;">
       <button type="submit">Get PIN</button>
     </form>
-    <form action="/logout" method="post" style="display: inline-block;">
+    <form action="/logout" method="get" style="display: inline-block;">
       <button type="submit">Logout</button>
     </form>
 </body>
