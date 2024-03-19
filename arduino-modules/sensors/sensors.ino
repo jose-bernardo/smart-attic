@@ -98,7 +98,7 @@ void loop() {
     }
 
     Serial.print("measurement light ");
-        Serial.println(lightValues);
+    Serial.println(lightValue);
 
     // Get temperature event and print its value.
     sensors_event_t event;
