@@ -2,26 +2,27 @@ import serial
 import os
 from flask import Flask, request
 
-serial_ports = {'system0': os.getenv("SERIAL_PORT")}
+serial_ports = {'user1': os.getenv("SERIAL_PORT")}
 baud_rate = 9600
 
 app = Flask(__name__)
 
 # Define routes
-@app.route('/configure', methods=['GET', 'POST'])
+@app.route('/configure', methods=['POST'])
 def configure():
     data = request.get_json()
     print("Received configuration data:", data)
 
-    ser = serial.Serial(serial_ports['system0'], baud_rate)
-    ser.write(data['min_temperature'])
+    ser = serial.Serial(serial_ports['user1'], baud_rate)
+    ser.write(data['minTemperature'].encode())
     ser.write(b'\n')
-    ser.write(data['max_temperature'])
+    ser.write(data['maxTemperature'].encode())
     ser.write(b'\n')
-    ser.write(data['min_humidity'])
+    ser.write(data['minHumidity'].encode())
     ser.write(b'\n')
-    ser.write(data['max_humidity'])
+    ser.write(data['maxHumidity'].encode())
     ser.write(b'\n')
+    ser.close()
 
     return 'Sensor configured successfully'
 
