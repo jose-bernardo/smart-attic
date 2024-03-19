@@ -36,6 +36,10 @@ pool = mariadb.ConnectionPool(
     **config
 )
 
+
+pi_url = os.getenv('PI_ADDRESS') or '127.0.0.1:5002'
+pi_url = 'http://' + pi_url if not pi_url.startswith('http://') else pi_url
+
 # Placeholder user credentials (replace with secure storage but its ok for simulation)
 users = {'user1': 'user1'}
 emails = {'user1': os.getenv('MAIL_ADDRESS')}
@@ -84,11 +88,6 @@ def logout():
 def changeAlarmValues():
 
     if request.method == 'POST':
-        #min_humidity = request.form.get('minHumidity') or ''
-        #max_humidity = request.form.get('maxHumidity') or ''
-        #min_temperature = request.form.get('minTemperature') or ''
-        #max_temperature = request.form.get('maxTemperature') or ''
-
         min_humidity = request.form.get('minHumidity')
         max_humidity = request.form.get('maxHumidity')
         min_temperature = request.form.get('minTemperature')
@@ -129,10 +128,9 @@ def changeAlarmValues():
                 'maxTemperature': max_temperature
                 }
 
-        url = 'http://' + (os.getenv('PI_ADDRESS') or '127.0.0.1:5002') + '/configure'
 
         # Make a POST request to the other Flask app
-        response = requests.post(url, json=data)
+        response = requests.post(pi_url + '/configure', json=data)
 
         # Check if the request was successful
         if response.ok:
@@ -261,14 +259,13 @@ def addMeasure():
 def addFootage():
     # Receive the video file from the server
     videofile = request.files['video']
-    username = request.json['username']
     filename = './media/video_' + str(time.time()) + '.avi'
     videofile.save(filename)
 
     # for testing purposes 
     #filename = './media/received_video1710517031.731575.avi'
 
-    recipient_email = emails[username]
+    recipient_email = emails[request.form['username']]
     subject = "Video footage for invalid pin input"
     body = "Please see the attached video footage."
 
@@ -287,8 +284,7 @@ def addFootage():
 
 @app.route('/notify', methods=['POST'])
 def notify():
-    username = request.json['username']
-    recipient_email = emails[username]
+    recipient_email = emails[request.form['username']]
     subject = "Alarm " + request.form['sensorid']
     body = "Alarm for " + request.form['sensorid'] + " sensor. Value: " + request.form['value']
 

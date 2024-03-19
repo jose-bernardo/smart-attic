@@ -2,6 +2,9 @@ import requests
 import os
 import subprocess
 
+server_url = os.getenv('SERVER_URL') or '127.0.0.1:5001'
+server_url = 'http://' + server_url if not server_url.startswith('http://') else server_url
+
 def read_input():
     # Read exactly 1 digit
     while True:
@@ -26,9 +29,8 @@ if __name__ == "__main__":
     while(True):
         userid, pin = read_input()
 
-        url = 'http://' + (os.getenv('SERVER_URL') or '127.0.0.1:5001') + '/enterPin'  # Replace 'your-api-endpoint' with the actual endpoint
         data = {'userid': 'user' + userid, 'pin': pin}
-        response = requests.post(url, data=data)
+        response = requests.post(server_url + '/enterPin', data=data)
 
         if response.ok:
             print(response.text)  # Print the raw response content

@@ -5,6 +5,9 @@ import os
 import sys
 
 def main():
+    server_url = os.getenv("SERVER_URL") or "127.0.0.1:5001"
+    server_url = 'http://' + server_url if not server_url.startswith('http://') else server_url
+
     # Initialize the camera
     cap = cv2.VideoCapture(0)
 
@@ -39,10 +42,9 @@ def main():
     out.release()
 
     # Send the video file via HTTP POST request
-    url = 'http://' + (os.getenv('SERVER_URL') or "127.0.0.1:5001") + '/addFootage'
     files = {'video': open('output.avi', 'rb')}
     data = {'username': sys.argv[1]}
-    response = requests.post(url, data=data, files=files)
+    response = requests.post(server_url + '/addFootage', data=data, files=files)
 
     # Print response
     print(response.text)
