@@ -14,6 +14,8 @@ def configure():
     print("Received configuration data:", data)
 
     ser = serial.Serial(serial_ports['user1'], baud_rate)
+    ser.write('config'.encode())
+    ser.write(b'\n')
     ser.write(data['minTemperature'].encode())
     ser.write(b'\n')
     ser.write(data['maxTemperature'].encode())
