@@ -3,13 +3,11 @@ from flask_mail import Mail, Message
 from functools import wraps
 import requests
 import secrets
-import json
 import mariadb
 import plotly.graph_objs as go
-import cv2
-import numpy as np
 import time, datetime
-import os, sys, random
+import os
+import random
 
 app = Flask(__name__)
 
@@ -19,7 +17,7 @@ app.config.update(
     MAIL_PORT=587,
     MAIL_USE_TLS=True,
     MAIL_USE_SSL=False,
-    MAIL_USERNAME='cocodoce02@gmail.com',  # Your Gmail address
+    MAIL_USERNAME='cocodoce02@gmail.com', # Change this maybe :))))) Your Gmail address
     MAIL_PASSWORD='aocb lgki dmgj yzkj',  # Your Gmail app password
     MAIL_DEFAULT_SENDER='cocodoce02@gmail.com'  # Default sender email
 )
@@ -33,14 +31,15 @@ config = {
 }
 
 pool = mariadb.ConnectionPool(
-    pool_name='banana',
+    pool_name='smartatticpool',
     pool_size=5,
     **config
 )
 
-# Placeholder user credentials (replace with secure storage)
-users = {'user1': 'user1', 'user2': 'user2'}
-pins = {'user1': None, 'user2': None}
+# Placeholder user credentials (replace with secure storage but its ok for simulation)
+users = {'user1': 'user1'}
+emails = {'user1': os.getenv('MAIL_ADDRESS')}
+pins = {'user1': None}
 app.secret_key = secrets.token_hex(16)  # Generates a 32-character hexadecimal string (16 bytes)
 
 def login_required(f):
@@ -83,9 +82,12 @@ def logout():
 @app.route('/changeAlarmValues', methods=['GET', 'POST'])
 @login_required
 def changeAlarmValues():
-    
+
     if request.method == 'POST':
-        raspberrypi_address = "127.0.0.1"
+        #min_humidity = request.form.get('minHumidity') or ''
+        #max_humidity = request.form.get('maxHumidity') or ''
+        #min_temperature = request.form.get('minTemperature') or ''
+        #max_temperature = request.form.get('maxTemperature') or ''
 
         min_humidity = request.form.get('minHumidity')
         max_humidity = request.form.get('maxHumidity')
@@ -110,20 +112,25 @@ def changeAlarmValues():
         if max_temperature != '':
             if not max_temperature.isdigit() or not 0 <= int(max_temperature) <= 50:
                 temperature_error_max = 'Max temperature must be a number between 0 and 50'
-        
+
         if humidity_error_min or humidity_error_max or temperature_error_min or temperature_error_max:
-            return render_template('changeAlarmValues.html', humidity_error_min=humidity_error_min, humidity_error_max=humidity_error_max, temperature_error_min=temperature_error_min, temperature_error_max=temperature_error_max)
+            return render_template('changeAlarmValues.html',
+                                   humidity_error_min=humidity_error_min,
+                                   humidity_error_max=humidity_error_max,
+                                   temperature_error_min=temperature_error_min,
+                                   temperature_error_max=temperature_error_max
+                                   )
 
         # Data to send to the other Flask app
         data = {
-            'minHumidity': min_humidity,
-            'maxHumidity': max_humidity,
-            'minTemperature': min_temperature,
-            'maxTemperature': max_temperature
-        }
+                'minHumidity': min_humidity,
+                'maxHumidity': max_humidity,
+                'minTemperature': min_temperature,
+                'maxTemperature': max_temperature
+                }
 
-        url = 'http://' + raspberrypi_address + ':5002/receiveAlarmValues'
-        
+        url = 'http://' + (os.getenv('PI_ADDRESS') or '127.0.0.1:5002') + '/configure'
+
         # Make a POST request to the other Flask app
         response = requests.post(url, json=data)
 
@@ -148,7 +155,7 @@ def get_pin():
     return render_template('getpin.html', pin=pin)
 
 
-@app.route('/analytics', methods=['GET'])
+@app.route('/analytics', methods=['GET', 'POST'])
 @login_required
 def analytics():
     if ('start_date' in request.form and 'end_date' in request.form):
@@ -175,7 +182,7 @@ def analytics():
     trace = go.Scatter(x=timestamps, y=temperature_values, mode='lines+markers', name='Humidity')
     layout = go.Layout(title='Temperature Over Time',
                        xaxis=dict(title='Time'),
-                       yaxis=dict(title='Humidity (%)'))
+                       yaxis=dict(title='Temperature (°C)'))
     fig = go.Figure(data=[trace], layout=layout)
     temperature_graph_json = fig.to_json()
 
@@ -231,7 +238,7 @@ def main():
 
     return render_template('main.html', data=data)
 
-@app.route('/add-measure', methods=['POST'])
+@app.route('/addMeasure', methods=['POST'])
 def addMeasure():
     value = request.form['value']
     sensorid = request.form['sensorid']
@@ -250,25 +257,24 @@ def addMeasure():
 
     return Response(status=200)
 
-@app.route('/add-footage', methods=['POST'])
+@app.route('/addFootage', methods=['POST'])
 def addFootage():
     # Receive the video file from the server
-
     videofile = request.files['video']
+    username = request.json['username']
     filename = './media/video_' + str(time.time()) + '.avi'
     videofile.save(filename)
-    
+
     # for testing purposes 
     #filename = './media/received_video1710517031.731575.avi'
 
-    recipient_email = "difb70@gmail.com"
-    subject = "Video footage of intruder"
+    recipient_email = emails[username]
+    subject = "Video footage for invalid pin input"
     body = "Please see the attached video footage."
-
 
     msg = Message(subject, recipients=[recipient_email])
     msg.body = body
-    
+
     # Attach the video file to the email
     with app.open_resource(filename) as video:
         msg.attach('video.avi', 'video/avi', video.read())
@@ -281,7 +287,8 @@ def addFootage():
 
 @app.route('/notify', methods=['POST'])
 def notify():
-    recipient_email = "difb70@gmail.com"
+    username = request.json['username']
+    recipient_email = emails[username]
     subject = "Alarm " + request.form['sensorid']
     body = "Alarm for " + request.form['sensorid'] + " sensor. Value: " + request.form['value']
 
