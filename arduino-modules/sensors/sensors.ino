@@ -18,8 +18,15 @@ bool humidityWarning = false;
 bool temperatureWarning = false;
 bool lightWarning = false;
 
+float maxTemperature = 25;
+float minTemperature = 15;
+float maxHumidity = 60;
+float minHumidity = 30;
+
 void setup() {
   Serial.begin(9600);
+  Serial.setTimeout(1000);
+  Serial.flush();
   // Initialize device.
   dht.begin();
   //Serial.println(F("DHT11 Unified Sensor Example"));
@@ -48,7 +55,7 @@ void setup() {
   Serial.println(F("------------------------------------"));
   */
   // Set delay between sensor readings based on sensor details.
-  delayMS = sensor.min_delay / 400;
+  delayMS = sensor.min_delay;
 
   pinMode(LEDLPIN, OUTPUT);
   pinMode(LEDHPIN, OUTPUT);
@@ -56,76 +63,81 @@ void setup() {
 }
 
 void loop() {
-  // Delay between measurements.
-  delay(delayMS);
+    // Reconfigure values if requested
+    if (Serial.available() > 0) {
+        float minTemperature = Serial.readStringUntil('\n').toFloat();
+        float maxTemperature = Serial.readStringUntil('\n').toFloat();
+        float minHumidity = Serial.readStringUntil('\n').toFloat();
+        float maxHumidity = Serial.readStringUntil('\n').toFloat();
 
-  int lightValue = analogRead(A0);
+        printf("%f %f %f %f\n", minTemperature, maxTemperature, minHumidity, maxHumidity);
+    }
 
-  if (lightValue < 80) {
-    if (!lightWarning) {
-      lightWarning = true;
-      digitalWrite(LEDLPIN, HIGH);
-      Serial.println("warning light");
-    }
-  } else {
-      lightWarning = false;
-      digitalWrite(LEDLPIN,  LOW);
-  }
+    int lightValue = analogRead(A0);
 
-  // Get temperature event and print its value.
-  sensors_event_t event;
-  dht.temperature().getEvent(&event);
-  if (isnan(event.temperature)) {
-    Serial.println(F("error reading temperature!"));
-  }
-  else {
-    Serial.print("measurement temperature ");
-    Serial.println(event.temperature);
+    if (lightValue > 80) {
+        if (!lightWarning) {
+            lightWarning = true;
+            digitalWrite(LEDLPIN, HIGH);
+            Serial.println("warning light");
+        }
+    } else {
+        lightWarning = false;
+        digitalWrite(LEDLPIN,  LOW);
+    }
 
-    if (event.temperature < 15) {
-      if (!temperatureWarning) {
-        temperatureWarning = true;
-        digitalWrite(LEDTPIN, HIGH);
-        Serial.println("warning temperature cold");
-      }
-    } else if (event.temperature > 30) {
-      if (!temperatureWarning) {
-        temperatureWarning = true;
-        digitalWrite(LEDTPIN, HIGH);
-        Serial.println("warning temperature hot");
-      }
-    }
-    else {
-      temperatureWarning = false;
-      digitalWrite(LEDTPIN,  LOW);
-    }
-  }
-  // Get humidity event and print its value.
-  dht.humidity().getEvent(&event);
-  if (isnan(event.relative_humidity)) {
-    Serial.println(F("error reading humidity!"));
-  }
-  else {
-    Serial.print("measurement humidity ");
-    Serial.println(event.relative_humidity);
+    // Get temperature event and print its value.
+    sensors_event_t event;
+    dht.temperature().getEvent(&event);
+    if (isnan(event.temperature)) {
+        Serial.println(F("error reading temperature!"));
+    } else {
+        Serial.print("measurement temperature ");
+        Serial.println(event.temperature);
 
-    if (event.relative_humidity < 30) {
-      if (!humidityWarning) {
-        humidityWarning = true;
-        digitalWrite(LEDHPIN, HIGH);
-        Serial.println("warning humidity dry");
-      }
-    } 
-    else if (event.relative_humidity > 50) {
-      if (!humidityWarning) {
-        humidityWarning = true;
-        digitalWrite(LEDHPIN, HIGH);
-        Serial.println("warning humidity wet");
-      }
+        if (event.temperature < minTemperature) {
+            if (!temperatureWarning) {
+                temperatureWarning = true;
+                digitalWrite(LEDTPIN, HIGH);
+                Serial.println("warning temperature cold");
+            }
+        } else if (event.temperature > maxTemperature) {
+            if (!temperatureWarning) {
+                temperatureWarning = true;
+                digitalWrite(LEDTPIN, HIGH);
+                Serial.println("warning temperature hot");
+            }
+        } else {
+            temperatureWarning = false;
+            digitalWrite(LEDTPIN,  LOW);
+        }
     }
-    else {
-      humidityWarning = false;
-      digitalWrite(LEDHPIN,  LOW);
+    // Get humidity event and print its value.
+    dht.humidity().getEvent(&event);
+    if (isnan(event.relative_humidity)) {
+        Serial.println(F("error reading humidity!"));
+    } else {
+        Serial.print("measurement humidity ");
+        Serial.println(event.relative_humidity);
+
+        if (event.relative_humidity < minHumidity) {
+            if (!humidityWarning) {
+                humidityWarning = true;
+                digitalWrite(LEDHPIN, HIGH);
+                Serial.println("warning humidity dry");
+            }
+        } else if (event.relative_humidity > maxHumidity) {
+            if (!humidityWarning) {
+                humidityWarning = true;
+                digitalWrite(LEDHPIN, HIGH);
+                Serial.println("warning humidity wet");
+            }
+        } else {
+            humidityWarning = false;
+            digitalWrite(LEDHPIN,  LOW);
+        }
+
+        // Delay between measurements.
+        delay(delayMS / 1000);
     }
-  }
 }
