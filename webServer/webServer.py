@@ -224,12 +224,26 @@ def main():
 
     humidity, timestamp = cur.fetchone()
     cur.close()
+
+    cur = conn.cursor()
+    cur.execute('SELECT VALUE, MEASURE_TIMESTAMP FROM MEASUREMENTS ' + 
+                'WHERE SENSORID=\'light\' ORDER BY MEASURE_TIMESTAMP DESC LIMIT 1')
+    conn.commit()
+
+    light, timestamp = cur.fetchone()
+    cur.close()
+
     conn.close()
+
+    if (light > 80):
+        light = 'BRIGHT'
+    else:
+        light = 'DARK'
 
     data = {
             "temperature": temperature,
             "humidity": humidity,
-            "luminosity": "GOOD",
+            "luminosity": light,
             "waterLeaks": "No leaks detected",
             "timestamp": timestamp,
             }

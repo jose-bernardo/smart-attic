@@ -97,6 +97,9 @@ void loop() {
         digitalWrite(LEDLPIN,  LOW);
     }
 
+    Serial.print("measurement light ");
+        Serial.println(lightValues);
+
     // Get temperature event and print its value.
     sensors_event_t event;
     dht.temperature().getEvent(&event);
