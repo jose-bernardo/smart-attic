@@ -65,13 +65,24 @@ void setup() {
 void loop() {
     // Reconfigure values if requested
     if (Serial.available() > 0) {
-        float minTemperature = Serial.readStringUntil('\n').toFloat();
-        float maxTemperature = Serial.readStringUntil('\n').toFloat();
-        float minHumidity = Serial.readStringUntil('\n').toFloat();
-        float maxHumidity = Serial.readStringUntil('\n').toFloat();
+        Serial.println("Configuring...");
 
-        printf("%f %f %f %f\n", minTemperature, maxTemperature, minHumidity, maxHumidity);
+        minTemperature = Serial.readStringUntil('\n').toFloat();
+        maxTemperature = Serial.readStringUntil('\n').toFloat();
+        minHumidity = Serial.readStringUntil('\n').toFloat();
+        maxHumidity = Serial.readStringUntil('\n').toFloat();
+
+        Serial.println("Operating with new configuration");
     }
+
+    Serial.println("Min temperature:");
+    Serial.println(minTemperature);
+    Serial.println("Min temperature:");
+    Serial.println(maxTemperature);
+    Serial.println("Min humidity:");
+    Serial.println(minHumidity);
+    Serial.println("Max humidity:");
+    Serial.println(maxHumidity);
 
     int lightValue = analogRead(A0);
 
@@ -138,6 +149,6 @@ void loop() {
         }
 
         // Delay between measurements.
-        delay(delayMS / 1000);
+        delay(delayMS);
     }
 }
