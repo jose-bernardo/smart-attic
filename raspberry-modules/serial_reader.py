@@ -24,7 +24,7 @@ try:
             requests.post('http://' + server_url + '/notify', data={'sensorid': info[1], 'value': info[2]})
         elif info[0] == "measurement":
             print(info)
-            requests.post('http://' + server_url + '/add-measure', data={'sensorid': info[1], 'value': info[2]})
+            requests.post('http://' + server_url + '/addMeasure', data={'sensorid': info[1], 'value': info[2]})
         elif info[0] == "error":
             print(line)
         else:
@@ -32,5 +32,4 @@ try:
 
 except KeyboardInterrupt:
     print("Exiting...")
-    conn.close() # Close the database connection when the program exits
     ser.close()  # Close the serial connection when the program exits

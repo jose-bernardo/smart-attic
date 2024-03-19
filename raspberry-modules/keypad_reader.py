@@ -1,4 +1,5 @@
 import requests
+import os
 import subprocess
 
 def read_input():
@@ -21,21 +22,21 @@ def read_input():
     return digit1, digits
 
 if __name__ == "__main__":
-    
+
     while(True):
         userid, pin = read_input()
-        
-        url = 'http://127.0.0.1:5001/enterPin'  # Replace 'your-api-endpoint' with the actual endpoint
+
+        url = 'http://' + (os.getenv('SERVER_URL') or '127.0.0.1:5001') + '/enterPin'  # Replace 'your-api-endpoint' with the actual endpoint
         data = {'userid': 'user' + userid, 'pin': pin}
         response = requests.post(url, data=data)
-        
+
         if response.ok:
             print(response.text)  # Print the raw response content
             #TODO send green light to the led
 
             if (response.text != "Access granted."):
                 #TODO send red light to the led
-                subprocess.Popen(["python3", "camera.py"]).wait()
+                subprocess.Popen(["python3", "camera.py", userid]).wait()
 
         else:
             print("Failed to get a valid response from the server.")

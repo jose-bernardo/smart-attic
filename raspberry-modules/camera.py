@@ -2,6 +2,7 @@ import cv2
 import time
 import requests
 import os
+import sys
 
 def main():
     # Initialize the camera
@@ -38,9 +39,10 @@ def main():
     out.release()
 
     # Send the video file via HTTP POST request
-    url = 'http://' + (os.getenv('SERVER_URL') or "127.0.0.1:5001") + '/add-footage'
+    url = 'http://' + (os.getenv('SERVER_URL') or "127.0.0.1:5001") + '/addFootage'
     files = {'video': open('output.avi', 'rb')}
-    response = requests.post(url, files=files)
+    data = {'username': sys.argv[1]}
+    response = requests.post(url, data=data, files=files)
 
     # Print response
     print(response.text)
