@@ -19,7 +19,7 @@ USB video camera (to connect to the Raspberry Pi)
 Python3
 Arduino IDE
 
-[Arduino Configuration](arduino_configuration.png)
+![Arduino Configuration](arduino_configuration.png)
 
 # Web application
 ## Installation
