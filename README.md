@@ -42,7 +42,7 @@ python3 webServer.py
 
 # Arduino modules
 
-Install Arduino IDE, connect your Arduino to your computer and upload the `sensors.ino` in [arduino-modules/sensors]`arduino-modules/sensors`]
+Install Arduino IDE, connect your Arduino to your computer and upload the `sensors.ino` in [arduino-modules/sensors](arduino-modules/sensors) to the arduino.
 
 # Raspberry Pi modules
 
