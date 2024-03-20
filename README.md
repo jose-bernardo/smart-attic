@@ -49,6 +49,9 @@ export PI_ADDRESS="pi-address"
 # set email address corresponding to user1 for testing
 export MAIL_ADDRESS="recipient-email-address"
 
+# create directory to store footage
+mkdir media
+
 python3 webServer.py
 ```
 
