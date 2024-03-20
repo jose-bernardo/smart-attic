@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session, url_for, Response
+from flask import Flask, render_template, request, redirect, session, url_for, send_file, Response
 from flask_mail import Mail, Message
 from functools import wraps
 import requests
@@ -17,9 +17,9 @@ app.config.update(
     MAIL_PORT=587,
     MAIL_USE_TLS=True,
     MAIL_USE_SSL=False,
-    MAIL_USERNAME='cocodoce02@gmail.com', # Change this maybe :))))) Your Gmail address
-    MAIL_PASSWORD='aocb lgki dmgj yzkj',  # Your Gmail app password
-    MAIL_DEFAULT_SENDER='cocodoce02@gmail.com'  # Default sender email
+    MAIL_USERNAME=os.getenv('ADMIN_MAIL_ADDRESS'), # Change this maybe :))))) Your Gmail address
+    MAIL_PASSWORD=os.getenv('ADMIN_MAIL_PASSWORD') ,  # Your Gmail app password
+    MAIL_DEFAULT_SENDER=os.getenv('ADMIN_MAIL_ADDRESS') # Default sender email
 )
 mail = Mail(app)
 
@@ -32,7 +32,7 @@ config = {
 
 pool = mariadb.ConnectionPool(
     pool_name='smartatticpool',
-    pool_size=5,
+    pool_size=10,
     **config
 )
 
@@ -165,6 +165,7 @@ def analytics():
         start_date = start_date.strftime('%Y-%m-%d %H:%M:%S')
         end_date = end_date.strftime('%Y-%m-%d %H:%M:%S')
 
+    # Create temperature graph
     conn = pool.get_connection()
     cur = conn.cursor()
     cur.execute('SELECT VALUE, MEASURE_TIMESTAMP FROM MEASUREMENTS ' + 
@@ -176,7 +177,6 @@ def analytics():
         temperature_values.append(value)
         timestamps.append(timestamp)
 
-    # Create temperature graph
     trace = go.Scatter(x=timestamps, y=temperature_values, mode='lines+markers', name='Humidity')
     layout = go.Layout(title='Temperature Over Time',
                        xaxis=dict(title='Time'),
@@ -184,6 +184,7 @@ def analytics():
     fig = go.Figure(data=[trace], layout=layout)
     temperature_graph_json = fig.to_json()
 
+    # Create humidity graph
     cur.execute('SELECT VALUE, MEASURE_TIMESTAMP FROM MEASUREMENTS ' + 
                 'WHERE SENSORID=\'humidity\' AND MEASURE_TIMESTAMP BETWEEN %s AND %s', (start_date, end_date))
     humidity_values = []
@@ -192,10 +193,6 @@ def analytics():
         humidity_values.append(value)
         timestamps.append(timestamp)
 
-    cur.close()
-    conn.close()
-
-    # Create humidity graph
     trace = go.Scatter(x=timestamps, y=humidity_values, mode='lines+markers', name='Humidity')
     layout = go.Layout(title='Humidity Over Time',
                        xaxis=dict(title='Time'),
@@ -203,7 +200,31 @@ def analytics():
     fig = go.Figure(data=[trace], layout=layout)
     humidity_graph_json = fig.to_json()
 
-    return render_template('analytics.html', data={'humidity': humidity_graph_json, 'temperature': temperature_graph_json})
+    # Create light graph
+    cur.execute('SELECT VALUE, MEASURE_TIMESTAMP FROM MEASUREMENTS ' + 
+                'WHERE SENSORID=\'light\' AND MEASURE_TIMESTAMP BETWEEN %s AND %s', (start_date, end_date))
+    light_values = []
+    timestamps = []
+    for value, timestamp in cur:
+        if (value > 80):
+            value = 'BRIGHT'
+        else:
+            value = 'DARK'
+        light_values.append(value)
+        timestamps.append(timestamp)
+
+    cur.close()
+    conn.close()
+
+    trace = go.Scatter(x=timestamps, y=light_values, mode='lines+markers', name='Humidity')
+    layout = go.Layout(title='Light Over Time',
+                       xaxis=dict(title='Time'),
+                       yaxis=dict(title='Light (%)'))
+    fig = go.Figure(data=[trace], layout=layout)
+    light_graph_json = fig.to_json()
+
+
+    return render_template('analytics.html', data={'humidity': humidity_graph_json, 'temperature': temperature_graph_json, 'light': light_graph_json})
 
 @app.route('/', methods=['GET'])
 @login_required
@@ -244,11 +265,31 @@ def main():
             "temperature": temperature,
             "humidity": humidity,
             "luminosity": light,
-            "waterLeaks": "No leaks detected",
             "timestamp": timestamp,
             }
 
     return render_template('main.html', data=data)
+
+@app.route('/accessLog', methods=['GET', 'POST'])
+@login_required
+def accessLog():
+    conn = pool.get_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT FOOTAGE_TIMESTAMP, STATUS, FILENAME FROM FOOTAGE ORDER BY FOOTAGE_TIMESTAMP DESC') # AND MEASURE_TIMESTAMP BETWEEN %s AND %s', (start_date, end_date))
+    accessList = []
+    for timestamp, status, filename in cur:
+        access = {}
+        access['timestamp'] = timestamp
+        access['status'] = status
+        access['filename'] = filename
+        accessList.append(access)
+
+    return render_template('accessLog.html', accessList=accessList)
+
+@app.route('/media/<filename>', methods=['GET'])
+@login_required
+def showFootage(filename):
+    return send_file(f'media/{filename}', mimetype='video/x-msvideo')
 
 @app.route('/addMeasure', methods=['POST'])
 def addMeasure():
@@ -273,28 +314,42 @@ def addMeasure():
 def addFootage():
     # Receive the video file from the server
     videofile = request.files['video']
-    filename = './media/video_' + str(time.time()) + '.avi'
+    status = request.form['status']
+    filename = 'media/video_' + str(time.time()) + '.mp4'
+    try:
+        conn = pool.get_connection()
+        cur = conn.cursor()
+        if status == 'correct':
+            cur.execute("INSERT INTO FOOTAGE (FILENAME, STATUS) VALUES (?, TRUE)", (filename,))
+        else:
+            cur.execute("INSERT INTO FOOTAGE (FILENAME, STATUS) VALUES (?, FALSE)", (filename,))
+        conn.commit()
+        cur.close()
+        conn.close()
+    except mariadb.Error as e:
+        print(e)
+
     videofile.save(filename)
 
-    # for testing purposes 
-    #filename = './media/received_video1710517031.731575.avi'
+    if status != 'correct':
+        recipient_email = emails[request.form['username']]
+        subject = "Video footage for invalid pin input"
+        body = "Please see the attached video footage."
 
-    recipient_email = emails[request.form['username']]
-    subject = "Video footage for invalid pin input"
-    body = "Please see the attached video footage."
+        msg = Message(subject, recipients=[recipient_email])
+        msg.body = body
 
-    msg = Message(subject, recipients=[recipient_email])
-    msg.body = body
+        # Attach the video file to the email
+        with app.open_resource(filename) as video:
+            msg.attach('video.avi', 'video/avi', video.read())
 
-    # Attach the video file to the email
-    with app.open_resource(filename) as video:
-        msg.attach('video.avi', 'video/avi', video.read())
+        try:
+            mail.send(msg)
+        except Exception as e:
+            return str(e), 500
 
-    try:
-        mail.send(msg)
-        return 'Email sent successfully!'
-    except Exception as e:
-        return str(e), 500
+    return ""
+
 
 @app.route('/notify', methods=['POST'])
 def notify():

@@ -21,8 +21,8 @@ def main():
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
     # Define the codec and create VideoWriter object
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter('output.avi', fourcc, 20.0, (640, 480))
+    fourcc = cv2.VideoWriter_fourcc(*'avc1')
+    out = cv2.VideoWriter('output.mp4', fourcc, 20.0, (640, 480))
 
     # Record for 5 seconds
     end_time = time.time() + 5
@@ -42,9 +42,10 @@ def main():
     out.release()
 
     # Send the video file via HTTP POST request
-    files = {'video': open('output.avi', 'rb')}
-    data = {'username': sys.argv[1]}
+    files = {'video': open('output.mp4', 'rb')}
+    data = {'username': sys.argv[1], 'status': sys.argv[2]}
     response = requests.post(server_url + '/addFootage', data=data, files=files)
+    os.remove('output.mp4')
 
     # Print response
     print(response.text)

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Access Log</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+  <h1>Access Log</h1>
+  <ul>
+      {% for access in accessList %}
+      <li>
+          <strong>{{ access['timestamp'] }} - </strong>
+          {% if access['status'] %}
+          <span style="color: green;">Successful</span>
+          {% else %}
+          <span style="color: red;">Bad attempt</span>
+          {% endif %}
+          <a href={{ access['filename'] }}>Watch</a>
+      </li>
+      {% endfor %}
+  </ul>
+
+  <!--
+  <form action="/analytics" method="post">
+      <label for="start_date">Start Date:</label>
+      <input type="date" id="start_date" name="start_date">
+      <label for="end_date">End Date:</label>
+      <input type="date" id="end_date" name="end_date">
+      <button type="submit" value="Submit">Filter</button>
+  </form>
+  -->
+</body>

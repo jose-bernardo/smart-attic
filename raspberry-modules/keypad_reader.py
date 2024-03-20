@@ -44,16 +44,17 @@ if __name__ == "__main__":
             ser.write(b'\n')
 
             if (response.text != "Access granted."):
-                #TODO send red light to the led
+                status = 'incorrect'
                 ser.write("close".encode())
                 ser.write(b'\n')
-                subprocess.Popen(["python3", "camera.py", userid]).wait()
-            
             else:
+                status = 'correct'
                 ser.write("open".encode())
                 ser.write(b'\n')
-            
+           
             ser.close()
+            subprocess.Popen(["python3", "camera.py", 'user' + userid, status]).wait()
+
 
         else:
             print("Failed to get a valid response from the server.")

@@ -10,11 +10,11 @@ baud_rate = 9600
 
 print(f"Server URL: {server_url}")
 
+# Initialize the serial connection
+ser = serial.Serial(serial_ports['user1'], baud_rate)
+
 try:
     while True:
-        # Initialize the serial connection
-        ser = serial.Serial(serial_ports['user1'], baud_rate)
-        ser.flush()
         # Read a line from the serial port
         line = ser.readline().decode("utf-8").strip()
         info = line.split()
@@ -22,10 +22,17 @@ try:
 
         # TODO user should be passed according to sensor
         if info[0] == "warning":
-            requests.post(server_url + '/notify', data={'sensorid': info[1], 'value': info[2], 'username': serial_ports['user1']})
+            requests.post(server_url + '/notify', data={'sensorid': info[1], 'value': info[2], 'username': 'user1'})
         elif info[0] == "measurement":
             requests.post(server_url + '/addMeasure', data={'sensorid': info[1], 'value': info[2]})
 
-        ser.close()  # Close the serial connection when the program exits
 except KeyboardInterrupt:
     print("Exiting...")
+
+except UnicodeDecodeError:
+    print("Ignoring this line")
+
+
+
+
+ser.close()  # Close the serial connection when the program exits

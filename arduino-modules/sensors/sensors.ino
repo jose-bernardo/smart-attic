@@ -2,11 +2,11 @@
 #include <DHT.h>
 #include <DHT_U.h>
 
-#define DHTPIN 3     // Digital pin connected to the DHT sensor 
-
-#define LEDLPIN 11    // Degital pin connected to the LED notifying the light
-#define LEDHPIN 12    // Degital pin connected to the LED notifying the humidity
-#define LEDTPIN 13    // Degital pin connected to the LED notifying the temperature
+#define DHTPIN 3      // Digital pin connected to the DHT sensor 
+#define LEDDPIN 10    // Digital pin connected to the LED representing the door 
+#define LEDLPIN 11    // Digital pin connected to the LED notifying the light
+#define LEDHPIN 12    // Digital pin connected to the LED notifying the humidity
+#define LEDTPIN 13    // Digital pin connected to the LED notifying the temperature
 
 #define DHTTYPE    DHT11     // DHT 11
 
@@ -29,34 +29,13 @@ void setup() {
   Serial.flush();
   // Initialize device.
   dht.begin();
-  //Serial.println(F("DHT11 Unified Sensor Example"));
   // Print temperature sensor details.
   sensor_t sensor;
   dht.temperature().getSensor(&sensor);
-  /*
-  Serial.println(F("------------------------------------"));
-  Serial.println(F("Temperature Sensor"));
-  Serial.print  (F("Sensor Type: ")); Serial.println(sensor.name);
-  Serial.print  (F("Driver Ver:  ")); Serial.println(sensor.version);
-  Serial.print  (F("Unique ID:   ")); Serial.println(sensor.sensor_id);
-  Serial.print  (F("Max Value:   ")); Serial.print(sensor.max_value); Serial.println(F("°C"));
-  Serial.print  (F("Min Value:   ")); Serial.print(sensor.min_value); Serial.println(F("°C"));
-  Serial.print  (F("Resolution:  ")); Serial.print(sensor.resolution); Serial.println(F("°C"));
-  Serial.println(F("------------------------------------"));
-  // Print humidity sensor details.
-  dht.humidity().getSensor(&sensor);
-  Serial.println(F("Humidity Sensor"));
-  Serial.print  (F("Sensor Type: ")); Serial.println(sensor.name);
-  Serial.print  (F("Driver Ver:  ")); Serial.println(sensor.version);
-  Serial.print  (F("Unique ID:   ")); Serial.println(sensor.sensor_id);
-  Serial.print  (F("Max Value:   ")); Serial.print(sensor.max_value); Serial.println(F("%"));
-  Serial.print  (F("Min Value:   ")); Serial.print(sensor.min_value); Serial.println(F("%"));
-  Serial.print  (F("Resolution:  ")); Serial.print(sensor.resolution); Serial.println(F("%"));
-  Serial.println(F("------------------------------------"));
-  */
   // Set delay between sensor readings based on sensor details.
   delayMS = sensor.min_delay;
 
+  pinMode(LEDDPIN, OUTPUT);
   pinMode(LEDLPIN, OUTPUT);
   pinMode(LEDHPIN, OUTPUT);
   pinMode(LEDTPIN, OUTPUT);
@@ -65,6 +44,8 @@ void setup() {
 void loop() {
     // Reconfigure values if requested
     if (Serial.available() > 0) {
+      String command = Serial.readStringUntil('\n');
+      if (command.equals("config")) {
         Serial.println("Configuring...");
 
         minTemperature = Serial.readStringUntil('\n').toFloat();
@@ -73,6 +54,25 @@ void loop() {
         maxHumidity = Serial.readStringUntil('\n').toFloat();
 
         Serial.println("Operating with new configuration");
+        
+      } else if (command.equals("door")) {
+
+        String arg = Serial.readStringUntil('\n');
+        if (arg.equals("open")) {
+          // turn onn light for one second (simulate open door)
+          digitalWrite(LEDDPIN, HIGH);
+          delay(delayMS / 500);
+          digitalWrite(LEDDPIN, LOW);
+        } else if (arg.equals("close")) {
+          for (int i = 0; i < 5; i++) {
+            // blink 5 times (simulate wrong pin entered)
+            digitalWrite(LEDDPIN, HIGH);
+            delay(delayMS / 1000);
+            digitalWrite(LEDDPIN, LOW);
+            delay(delayMS / 1000);
+          }
+        } 
+      }
     }
 
     Serial.println("Min temperature:");
@@ -84,13 +84,14 @@ void loop() {
     Serial.println("Max humidity:");
     Serial.println(maxHumidity);
 
+    // Get light value
     int lightValue = analogRead(A0);
 
     if (lightValue > 80) {
         if (!lightWarning) {
             lightWarning = true;
             digitalWrite(LEDLPIN, HIGH);
-            Serial.println("warning light");
+            Serial.println("warning light bright");
         }
     } else {
         lightWarning = false;
@@ -152,6 +153,6 @@ void loop() {
         }
 
         // Delay between measurements.
-        delay(delayMS);
+        delay(delayMS / 1000);
     }
 }
