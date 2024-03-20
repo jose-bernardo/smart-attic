@@ -40,12 +40,16 @@ export MAIL_ADDRESS="recipient-email-address"
 python3 webServer.py
 ```
 
-# Run Raspberry Pi modules
+# Arduino modules
+
+Install Arduino IDE, connect your Arduino to your computer and upload the `sensors.ino` in [arduino-modules/sensors]`arduino-modules/sensors`]
+
+# Raspberry Pi modules
 
 ## Installation
 
 ```
-cd webServer
+cd raspberry-modules
 
 pip3 install -r requirements.txt
 ```
