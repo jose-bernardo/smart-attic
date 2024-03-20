@@ -1,3 +1,4 @@
+# Description
 Smart Attic is a system that leverages the potential of Internet-of-Things (IoT) technologies 
 to address both the security and the safety issues that traditional attics pose. 
 The system integrates a network of intelligent sensors to gather data about the attic environment 
@@ -6,10 +7,22 @@ communication protocols to a central hub (Raspberry Pi), where it is analyzed. T
 uses actuators that, based on the analysis done by the central hub, takes automated actions 
 to ensure a swift and efficient response to security breaches or environmental threats.
 
+# Requirements
+
+## Hardware
+Arduino configured with 4 LEDs, a DHT11 sensors, and a photoresistor sensor as the in the image below
+Raspberry Pi
+Keyboard (to connect to the Raspberry Pi)
+USB video camera (to connect to the Raspberry Pi)
+
+## Software
+Python3
+Arduino IDE
+
+[Arduino Configuration](arduino_configuration.png)
+
 # Web application
-
 ## Installation
-
 ```
 cd webServer
 
@@ -17,7 +30,6 @@ pip3 install -r requirements.txt
 ```
 
 ## Run
-
 ```
 cd webServer
 
